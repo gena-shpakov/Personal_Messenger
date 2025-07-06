@@ -34,7 +34,7 @@ function showChatWindow() {
     chatWindow.style.display = "flex";
     input.focus();
 
-    socket.emit("user connected", nickname);)
+    socket.emit("user connected", nickname);
 
     // ✅ Після відображення чату — запросити історію повідомлень
     socket.emit("get history");

@@ -22,7 +22,7 @@ const client = new MongoClient(uri, {
   },
 });
 
-const onlineUsers = new Set(); // Для відстеження онлайн користувачів
+const onlineUsers = new Map(); // Збереження онлайн-користувачів
 
 async function startServer() {
   try {
@@ -40,11 +40,13 @@ async function startServer() {
     // Обробка нових підключень через Socket.io
     io.on("connection", (socket) => {
       console.log("🟢 Користувач підключився");
+      let currentUser = null;
 
+      // Підключення користувача з нікнеймом
       socket.on("user connected", (nickname) => {
-        socket.nickname = nickname;
-        onlineUsers.add(nickname); // Додаємо користувача до онлайн списку
-        io.emit("online users", Array.from(onlineUsers));
+        currentUser = nickname;
+        onlineUsers.set(socket.id, nickname);
+        io.emit("online users", Array.from(onlineUsers.values()));
       });
 
       // Відправка історії повідомлень новому користувачу
@@ -52,9 +54,9 @@ async function startServer() {
         try {
           const history = await messagesCollection
             .find({})
-            .sort({ timestamp: 1 }) // Від старих до нових
+            .sort({ timestamp: 1 })
             .toArray();
-          socket.emit("chat history", history); // Надіслати на клієнт
+          socket.emit("chat history", history);
         } catch (error) {
           console.error("❌ Помилка отримання історії:", error);
         }
@@ -63,21 +65,22 @@ async function startServer() {
       // Отримання повідомлення та збереження його у БД
       socket.on("chat message", async (msg) => {
         try {
-          // Збереження в MongoDB
           await messagesCollection.insertOne({
             text: msg,
             timestamp: new Date(),
           });
-
-          // Надсилання всім користувачам
           io.emit("chat message", msg);
         } catch (error) {
           console.error("❌ Помилка збереження повідомлення:", error);
         }
       });
 
-      // Обробка відключення користувача
+      // Відключення користувача
       socket.on("disconnect", () => {
+        if (currentUser) {
+          onlineUsers.delete(socket.id);
+          io.emit("online users", Array.from(onlineUsers.values()));
+        }
         console.log("🔴 Користувач вийшов");
       });
     });
