@@ -30,9 +30,21 @@ async function startServer() {
 
     app.use(express.static("public"));
 
-    io.on("connection", (socket) => {
+    io.on("connection", async (socket) => {
       console.log("Користувач підключився");
 
+      //Надсилаємо історію повідомлень
+      const recentMessages = await messagesCollection
+        .find({})
+        .sort({ timestamp: 1 })
+        .limit(50) // Отримуємо останні 50 повідомлень
+        .toArray();
+
+
+      //Відправка історіїї лише новому підключеному клієнту  
+      socket.emitWithAck("chat history", recentMessages);
+
+      //Обробка нових повідомлень
       socket.on("chat message", async (msg) => {
         // Збереження повідомлення в базу
         await messagesCollection.insertOne({
