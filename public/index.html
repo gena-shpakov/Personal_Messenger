@@ -2,15 +2,27 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <title>Простий месенджер</title>
+  <title>EchoChat</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <ul id="messages"></ul>
-  <form id="form">
-    <input id="input" autocomplete="off" placeholder="Напишіть повідомлення..." />
-    <button>Надіслати</button>
-  </form>
+
+  <div class="loginWindow">
+    <h2>Введіть свій нікнейм</h2>
+    <input type="text" id="nicknameInput" placeholder="Нікней" />
+    <button id="enterButton">Увійти</button> 
+  </div>
+
+  <div id="chatWindow" style="display: none;">
+    <p>Радий бачити, <span id="displayNickname"></span></p>
+  
+    
+    <ul id="messages"></ul>
+    <form id="form">
+      <input id="input" autocomplete="off" placeholder="Напишіть повідомлення..." />
+      <button>Надіслати</button>
+    </form>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
