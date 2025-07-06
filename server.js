@@ -1,17 +1,19 @@
-require("dotenv").config(); // має бути ПЕРШИМ!
+// Завантаження змінних середовища з файлу .env
+require("dotenv").config();
 
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const app = express();                    // Створення екземпляру Express
+const server = http.createServer(app);    // Створення HTTP-сервера
+const io = new Server(server);            // Ініціалізація Socket.io
 
-// === Підключення до MongoDB через змінну середовища ===
-const uri = process.env.MONGO_URI;
+// Отримання MongoDB URI з файлу .env
+const uri = process.env.MONGODB_URI;
 
+// Налаштування MongoDB клієнта
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -22,50 +24,65 @@ const client = new MongoClient(uri, {
 
 async function startServer() {
   try {
+    // Підключення до MongoDB
     await client.connect();
     console.log("✅ Підключено до MongoDB Atlas");
 
-    const db = client.db("chat"); // назва бази
-    const messagesCollection = db.collection("messages"); // колекція повідомлень
+    // Вибір бази та колекції
+    const db = client.db("chat");
+    const messagesCollection = db.collection("messages");
 
+    // Статичні файли (HTML, CSS, JS) — папка "public"
     app.use(express.static("public"));
 
-    io.on("connection", async (socket) => {
-      console.log("Користувач підключився");
+    // Обробка нових підключень через Socket.io
+    io.on("connection", (socket) => {
+      console.log("🟢 Користувач підключився");
 
-      //Надсилаємо історію повідомлень
-      const recentMessages = await messagesCollection
-        .find({})
-        .sort({ timestamp: 1 })
-        .limit(50) // Отримуємо останні 50 повідомлень
-        .toArray();
-
-
-      //Відправка історіїї лише новому підключеному клієнту  
-      socket.emitWithAck("chat history", recentMessages);
-
-      //Обробка нових повідомлень
-      socket.on("chat message", async (msg) => {
-        // Збереження повідомлення в базу
-        await messagesCollection.insertOne({
-          text: msg,
-          timestamp: new Date(),
-        });
-
-        io.emit("chat message", msg);
+      // Відправка історії повідомлень новому користувачу
+      socket.on("get history", async () => {
+        try {
+          const history = await messagesCollection
+            .find({})
+            .sort({ timestamp: 1 }) // Від старих до нових
+            .toArray();
+          socket.emit("chat history", history); // Надіслати на клієнт
+        } catch (error) {
+          console.error("❌ Помилка отримання історії:", error);
+        }
       });
 
+      // Отримання повідомлення та збереження його у БД
+      socket.on("chat message", async (msg) => {
+        try {
+          // Збереження в MongoDB
+          await messagesCollection.insertOne({
+            text: msg,
+            timestamp: new Date(),
+          });
+
+          // Надсилання всім користувачам
+          io.emit("chat message", msg);
+        } catch (error) {
+          console.error("❌ Помилка збереження повідомлення:", error);
+        }
+      });
+
+      // Обробка відключення користувача
       socket.on("disconnect", () => {
-        console.log("Користувач вийшов");
+        console.log("🔴 Користувач вийшов");
       });
     });
 
+    // Запуск сервера
     server.listen(3000, "0.0.0.0", () => {
       console.log("🚀 Сервер запущено на http://localhost:3000");
     });
+
   } catch (error) {
     console.error("❌ Помилка підключення до MongoDB:", error);
   }
 }
 
+// Старт сервера
 startServer();
