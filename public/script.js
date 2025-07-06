@@ -3,7 +3,7 @@ const socket = io();
 const loginWindow = document.getElementById("loginWindow");
 const chatWindow = document.getElementById("chatWindow");
 const nicknameInput = document.getElementById("nicknameInput");
-const enterBtn = document.getElementById('enterBtn');
+const enterBtn = document.getElementById('enterButton');
 const displayNickname = document.getElementById('displayNickname');
 
 const form = document.getElementById("form");
@@ -11,7 +11,7 @@ const input = document.getElementById("input");
 const messages = document.getElementById("messages");
 
 //обробка для кнопки входу
-enterButton.addEventListener('click', (e) => {
+enterBtn.addEventListener('click', (e) => {
   e.preventDefault();
   const nickname = nicknameInput.value.trim();
   if (nickname) {
