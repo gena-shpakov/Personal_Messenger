@@ -1,8 +1,16 @@
+* {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: sans-serif;
+  font-family: 'Segoe UI', sans-serif;
   margin: 0;
   padding: 0;
-  background: #f2f2f2;
+  background: #e5ddd5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
 }
 
 /* ===== Вікно логіну ===== */
@@ -11,27 +19,39 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
-  background: #ffffff;
+  width: 100%;
+  max-width: 400px;
+  background: #fff;
+  padding: 40px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border-radius: 12px;
 }
 
 #loginWindow h2 {
   margin-bottom: 20px;
+  color: #333;
 }
 
 #nicknameInput {
-  padding: 10px;
-  width: 250px;
+  padding: 12px;
+  width: 100%;
   border: 1px solid #ccc;
   border-radius: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
   font-size: 16px;
+  outline: none;
+  transition: border 0.3s ease;
+}
+
+#nicknameInput:focus {
+  border-color: #0084ff;
 }
 
 #enterBtn {
-  padding: 10px 20px;
+  width: 100%;
+  padding: 12px 0;
   font-size: 16px;
-  background-color: #4caf50;
+  background-color: #0084ff;
   color: white;
   border: none;
   border-radius: 8px;
@@ -40,37 +60,54 @@ body {
 }
 
 #enterBtn:hover {
-  background-color: #45a049;
+  background-color: #006fd3;
 }
 
-/* ===== Чат ===== */
+/* ===== Вікно чату ===== */
 #chatWindow {
-  display: flex;
+  display: none;
   flex-direction: column;
   height: 100vh;
+  width: 100%;
+  max-width: 600px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 #chatWindow p {
   margin: 10px;
-  font-weight: bold;
+  font-weight: 600;
+  color: #444;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
 }
 
-/* Список повідомлень */
+/* ===== Повідомлення ===== */
 #messages {
   list-style: none;
-  padding: 10px;
+  padding: 20px;
   margin: 0;
   flex-grow: 1;
   overflow-y: auto;
+  background-color: #f8f8f8;
 }
 
 #messages li {
   background: #dcf8c6;
-  padding: 8px 12px;
-  border-radius: 12px;
-  margin-bottom: 10px;
-  max-width: 60%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  max-width: 75%;
+  font-size: 15px;
   word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  animation: fadeIn 0.3s ease;
+}
+
+/* Анімація появи повідомлень */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ===== Форма надсилання ===== */
@@ -83,15 +120,21 @@ body {
 
 #input {
   flex: 1;
-  padding: 10px;
-  font-size: 16px;
+  padding: 12px;
+  font-size: 15px;
   border-radius: 8px;
   border: 1px solid #ccc;
+  outline: none;
+  transition: border 0.3s ease;
+}
+
+#input:focus {
+  border-color: #0084ff;
 }
 
 button {
-  padding: 10px 20px;
-  font-size: 16px;
+  padding: 12px 20px;
+  font-size: 15px;
   margin-left: 10px;
   background-color: #0084ff;
   color: white;
@@ -105,94 +148,36 @@ button:hover {
   background-color: #006fd3;
 }
 
-/* ===== Медіазапити ===== */
+/* ===== Медія-запити ===== */
 
-/* Телефони (до 600px) */
+/* Телефони */
 @media (max-width: 600px) {
-  #nicknameInput {
-    width: 90vw;
-    font-size: 14px;
+  #loginWindow,
+  #chatWindow {
+    border-radius: 0;
+    box-shadow: none;
   }
 
-  #enterBtn {
-    width: 90vw;
-    padding: 12px 0;
-    font-size: 16px;
+  #nicknameInput,
+  #enterBtn,
+  #input,
+  button {
+    font-size: 14px;
   }
 
   #messages li {
-    max-width: 80%;
     font-size: 14px;
-    padding: 10px;
-  }
-
-  #input {
-    font-size: 14px;
-  }
-
-  button {
-    padding: 10px 15px;
-    font-size: 14px;
-    margin-left: 5px;
-  }
-
-  #form {
-    padding: 8px;
+    max-width: 85%;
   }
 }
 
-/* Планшети (601px - 900px) */
+/* Планшети */
 @media (min-width: 601px) and (max-width: 900px) {
-  #nicknameInput {
-    width: 300px;
-    font-size: 15px;
-  }
-
-  #enterBtn {
-    width: 300px;
-    padding: 12px 0;
-    font-size: 16px;
+  #chatWindow {
+    max-width: 700px;
   }
 
   #messages li {
     max-width: 70%;
-    font-size: 15px;
-  }
-
-  #input {
-    font-size: 15px;
-  }
-
-  button {
-    padding: 10px 18px;
-    font-size: 15px;
-  }
-}
-
-/* Ноутбуки і більші екрани (901px і більше) */
-@media (min-width: 901px) {
-  #nicknameInput {
-    width: 250px;
-    font-size: 16px;
-  }
-
-  #enterBtn {
-    width: auto;
-    padding: 10px 20px;
-    font-size: 16px;
-  }
-
-  #messages li {
-    max-width: 60%;
-    font-size: 16px;
-  }
-
-  #input {
-    font-size: 16px;
-  }
-
-  button {
-    padding: 10px 20px;
-    font-size: 16px;
   }
 }

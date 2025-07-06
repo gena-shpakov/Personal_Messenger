@@ -1,16 +1,17 @@
 const socket = io();
 
+// Захоплення елементів
 const loginWindow = document.getElementById("loginWindow");
 const chatWindow = document.getElementById("chatWindow");
 const nicknameInput = document.getElementById("nicknameInput");
-const enterBtn = document.getElementById('enterButton');
+const enterBtn = document.getElementById('enterBtn'); // ← ВАЖЛИВО: id="enterBtn" (у HTML теж має бути так)
 const displayNickname = document.getElementById('displayNickname');
 
 const form = document.getElementById("form");
 const input = document.getElementById("input");
 const messages = document.getElementById("messages");
 
-//обробка для кнопки входу
+// Натискання кнопки "Увійти"
 enterBtn.addEventListener('click', (e) => {
   e.preventDefault();
   const nickname = nicknameInput.value.trim();
@@ -18,29 +19,29 @@ enterBtn.addEventListener('click', (e) => {
     sessionStorage.setItem('nickname', nickname);
     showChatWindow();
   } else {
-    alert("Please enter a nickname.");
+    alert("Будь ласка, введіть нікнейм.");
   }
-});  
+});
 
-//Показати чат і приховати форму логіну
+// Показати вікно чату
 function showChatWindow() {
   const nickname = sessionStorage.getItem('nickname');
   if (nickname) {
     displayNickname.textContent = nickname;
     loginWindow.style.display = "none";
-    chatWindow.style.display = "block";
+    chatWindow.style.display = "flex"; // ← З flex-розміткою працює краще
     input.focus();
   } else {
-    alert("Please enter a nickname.");
+    alert("Будь ласка, введіть нікнейм.");
   }
 }
 
-// Якщо нікнейм не збережений - показати чат одразу
+// Якщо нікнейм вже збережено — одразу перейти до чату
 if (sessionStorage.getItem('nickname')) {
   showChatWindow();
 }
 
-// Відправка повідомлення з нікнеймом
+// Надсилання повідомлення
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   const nickname = sessionStorage.getItem('nickname');
@@ -51,10 +52,10 @@ form.addEventListener("submit", (e) => {
   }
 });
 
-// Отримання повідомлення 
+// Отримання повідомлення
 socket.on("chat message", (msg) => {
   const item = document.createElement("li");
   item.textContent = msg;
   messages.appendChild(item);
-  window.scrollTo(0, document.body.scrollHeight);
+  messages.scrollTop = messages.scrollHeight;
 });

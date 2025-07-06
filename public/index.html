@@ -2,25 +2,28 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EchoChat</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
+  <!-- Вікно входу -->
   <div id="loginWindow">
     <h2>Введіть свій нікнейм</h2>
     <input type="text" id="nicknameInput" placeholder="Нікнейм" />
-    <button id="enterButton">Увійти</button> 
+    <button id="enterBtn">Увійти</button> 
   </div>
 
-  <div id="chatWindow" style="display: none;">
+  <!-- Вікно чату -->
+  <div id="chatWindow">
     <p>Радий бачити, <span id="displayNickname"></span></p>
-  
 
     <ul id="messages"></ul>
+
     <form id="form">
       <input id="input" autocomplete="off" placeholder="Напишіть повідомлення..." />
-      <button>Надіслати</button>
+      <button type="submit">Надіслати</button>
     </form>
   </div>
 
