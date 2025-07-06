@@ -11,6 +11,8 @@ const form = document.getElementById("form");
 const input = document.getElementById("input");
 const messages = document.getElementById("messages");
 
+const onlineUsersList = document.getElementById("onlineUsersList");
+
 // Натискання кнопки "Увійти"
 enterBtn.addEventListener("click", (e) => {
   e.preventDefault();
@@ -31,6 +33,8 @@ function showChatWindow() {
     loginWindow.style.display = "none";
     chatWindow.style.display = "flex";
     input.focus();
+
+    socket.emit("user connected", nickname);)
 
     // ✅ Після відображення чату — запросити історію повідомлень
     socket.emit("get history");
@@ -71,4 +75,14 @@ socket.on("chat message", (msg) => {
   item.textContent = msg;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
+});
+
+// Отримання списку онлайн користувачів
+socket.on("online users", (users) => {
+  onlineUsersList.innerHTML = ""; // Очищення списку
+  users.forEach((user) => {
+    const li = document.createElement("li");
+    li.textContent = user;
+    onlineUsersList.appendChild(li);
+  });
 });

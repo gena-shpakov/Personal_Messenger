@@ -22,6 +22,8 @@ const client = new MongoClient(uri, {
   },
 });
 
+const onlineUsers = new Set(); // Для відстеження онлайн користувачів
+
 async function startServer() {
   try {
     // Підключення до MongoDB
@@ -38,6 +40,12 @@ async function startServer() {
     // Обробка нових підключень через Socket.io
     io.on("connection", (socket) => {
       console.log("🟢 Користувач підключився");
+
+      socket.on("user connected", (nickname) => {
+        socket.nickname = nickname;
+        onlineUsers.add(nickname); // Додаємо користувача до онлайн списку
+        io.emit("online users", Array.from(onlineUsers));
+      });
 
       // Відправка історії повідомлень новому користувачу
       socket.on("get history", async () => {
