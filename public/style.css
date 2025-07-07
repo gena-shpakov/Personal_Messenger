@@ -13,37 +13,89 @@ body {
   min-height: 100vh;
 }
 
+/* === DARK THEME === */
+
 body.dark {
-  background: #1e1e1e;
-  color: #eaeaea;
+  background: #121212;
+  color: #e0e0e0;
 }
 
-body.dark .authWindow {
-  background: #2c2c2c;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+/* Загальні блоки */
+body.dark .authWindow,
+body.dark #chatWindow {
+  background-color: #1e1e1e;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
 }
 
-body.dark input,
-body.dark button {
-  background-color: #3a3a3a;
-  border: 1px solid #666;
-  color: #eee;
+body.dark .authWindow h2,
+body.dark #chatWindow h3,
+body.dark #chatWindow p {
+  color: #e0e0e0;
+}
+
+/* Вхідні поля */
+body.dark input {
+  background-color: #2c2c2c;
+  color: #e0e0e0;
+  border: 1px solid #444;
 }
 
 body.dark input:focus {
   border-color: #4f9eff;
 }
 
+/* Кнопки */
 body.dark button {
   background-color: #4f9eff;
+  color: #fff;
 }
 
 body.dark button:hover {
   background-color: #357dcc;
 }
 
+/* Посилання */
 body.dark a {
   color: #4f9eff;
+}
+
+/* Повідомлення */
+body.dark #messages {
+  background-color: #181818;
+}
+
+body.dark #messages li {
+  background-color: #333333;
+  color: #e0e0e0;
+  box-shadow: 0 1px 2px rgba(255, 255, 255, 0.1);
+}
+
+/* Список онлайн користувачів */
+body.dark #chatWindow > div {
+  background-color: #2a2a2a;
+  border-bottom: 1px solid #444;
+}
+
+body.dark #onlineUsersList li {
+  background-color: #3b4c5a;
+  color: #e0e0e0;
+}
+
+/* Форма надсилання */
+body.dark #form {
+  background-color: #1e1e1e;
+  border-top: 1px solid #444;
+}
+
+/* Поле введення повідомлення */
+body.dark #input {
+  background-color: #2c2c2c;
+  color: #e0e0e0;
+  border: 1px solid #444;
+}
+
+body.dark #input:focus {
+  border-color: #4f9eff;
 }
 
 

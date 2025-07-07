@@ -169,11 +169,20 @@ socket.on("online users", (users) => {
   });
 });
 
-// Перемикання темної теми
+// === Тема: запам'ятовування через localStorage ===
 const themeToggle = document.getElementById("themeToggle");
 
+// Зчитати збережену тему при завантаженні сторінки
+if (localStorage.getItem("theme") === "dark") {
+  document.body.classList.add("dark");
+  themeToggle.textContent = "☀️ Світла тема";
+}
+
+// Перемикач теми
 themeToggle.addEventListener("click", () => {
-  document.body.classList.toggle("dark");
-  const isDark = document.body.classList.contains("dark");
+  const isDark = document.body.classList.toggle("dark");
   themeToggle.textContent = isDark ? "☀️ Світла тема" : "🌙 Темна тема";
+
+  // Зберігаємо вибір теми в localStorage
+  localStorage.setItem("theme", isDark ? "dark" : "light");
 });
