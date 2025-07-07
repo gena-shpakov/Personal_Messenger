@@ -2,26 +2,111 @@ const socket = io();
 
 // Захоплення елементів
 const loginWindow = document.getElementById("loginWindow");
+const registerWindow = document.getElementById("registerWindow");
 const chatWindow = document.getElementById("chatWindow");
-const nicknameInput = document.getElementById("nicknameInput");
-const enterBtn = document.getElementById("enterBtn");
 const displayNickname = document.getElementById("displayNickname");
 
 const form = document.getElementById("form");
 const input = document.getElementById("input");
 const messages = document.getElementById("messages");
-
 const onlineUsersList = document.getElementById("onlineUsersList");
 
-// Натискання кнопки "Увійти"
-enterBtn.addEventListener("click", (e) => {
+// Поля для реєстрації
+const regEmail = document.getElementById("regEmail");
+const regNickname = document.getElementById("regNickname");
+const regPassword = document.getElementById("regPassword");
+const registerBtn = document.getElementById("registerBtn");
+const registerMessage = document.getElementById("registerMessage");
+
+// Поля для входу
+const loginEmail = document.getElementById("loginEmail");
+const loginPassword = document.getElementById("loginPassword");
+const loginBtn = document.getElementById("loginBtn");
+const loginMessage = document.getElementById("loginMessage");
+
+// Перемикачі між вікнами
+const showRegisterLink = document.getElementById("showRegister");
+const showLoginLink = document.getElementById("showLogin");
+
+showRegisterLink.addEventListener("click", (e) => {
   e.preventDefault();
-  const nickname = nicknameInput.value.trim();
-  if (nickname) {
-    sessionStorage.setItem("nickname", nickname);
-    showChatWindow();
-  } else {
-    alert("Будь ласка, введіть нікнейм.");
+  loginWindow.style.display = "none";
+  registerWindow.style.display = "flex";
+});
+
+showLoginLink.addEventListener("click", (e) => {
+  e.preventDefault();
+  registerWindow.style.display = "none";
+  loginWindow.style.display = "flex";
+});
+
+// Реєстрація
+registerBtn.addEventListener("click", async (e) => {
+  e.preventDefault();
+
+  const email = regEmail.value.trim();
+  const nickname = regNickname.value.trim();
+  const password = regPassword.value.trim();
+
+  if (!email || !nickname || !password) {
+    registerMessage.textContent = "Будь ласка, заповніть всі поля.";
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, nickname, password }),
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      registerMessage.style.color = "green";
+      registerMessage.textContent = "Реєстрація успішна! Увійдіть.";
+      setTimeout(() => {
+        registerWindow.style.display = "none";
+        loginWindow.style.display = "flex";
+        registerMessage.textContent = "";
+      }, 1500);
+    } else {
+      registerMessage.style.color = "red";
+      registerMessage.textContent = data.message || "Помилка.";
+    }
+  } catch (err) {
+    registerMessage.textContent = "Помилка мережі.";
+  }
+});
+
+// Вхід
+loginBtn.addEventListener("click", async (e) => {
+  e.preventDefault();
+
+  const email = loginEmail.value.trim();
+  const password = loginPassword.value.trim();
+
+  if (!email || !password) {
+    loginMessage.textContent = "Заповніть усі поля.";
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+
+    if (res.ok && data.token) {
+      sessionStorage.setItem("token", data.token);
+      sessionStorage.setItem("nickname", data.nickname);
+      showChatWindow();
+    } else {
+      loginMessage.textContent = data.message || "Помилка входу.";
+    }
+  } catch (err) {
+    loginMessage.textContent = "Помилка мережі.";
   }
 });
 
@@ -31,15 +116,12 @@ function showChatWindow() {
   if (nickname) {
     displayNickname.textContent = nickname;
     loginWindow.style.display = "none";
+    registerWindow.style.display = "none";
     chatWindow.style.display = "flex";
     input.focus();
 
     socket.emit("user connected", nickname);
-
-    // ✅ Після відображення чату — запросити історію повідомлень
     socket.emit("get history");
-  } else {
-    alert("Будь ласка, введіть нікнейм.");
   }
 }
 
@@ -59,7 +141,7 @@ form.addEventListener("submit", (e) => {
   }
 });
 
-// ✅ Отримання історії повідомлень
+// Отримання історії повідомлень
 socket.on("chat history", (history) => {
   history.forEach((msgObj) => {
     const item = document.createElement("li");
@@ -79,7 +161,7 @@ socket.on("chat message", (msg) => {
 
 // Отримання списку онлайн користувачів
 socket.on("online users", (users) => {
-  onlineUsersList.innerHTML = ""; // Очищення списку
+  onlineUsersList.innerHTML = "";
   users.forEach((user) => {
     const li = document.createElement("li");
     li.textContent = user;

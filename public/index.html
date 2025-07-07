@@ -9,11 +9,25 @@
 </head>
 <body>
 
-  <!-- Вікно входу -->
+  <!-- Форма реєстрації -->
+  <div id="registerWindow" style="display:none;">
+    <h2>Реєстрація</h2>
+    <input type="email" id="regEmail" placeholder="Email" />
+    <input type="text" id="regNickname" placeholder="Нікнейм" />
+    <input type="password" id="regPassword" placeholder="Пароль" />
+    <button id="registerBtn">Зареєструватися</button>
+    <p>Вже є акаунт? <a href="#" id="showLogin">Увійти</a></p>
+    <p id="registerMessage" style="color:red;"></p>
+  </div>
+
+  <!-- Форма логіну -->
   <div id="loginWindow">
-    <h2>Введіть свій нікнейм</h2>
-    <input type="text" id="nicknameInput" placeholder="Нікнейм" />
-    <button id="enterBtn">Увійти</button> 
+    <h2>Увійти</h2>
+    <input type="email" id="loginEmail" placeholder="Email" />
+    <input type="password" id="loginPassword" placeholder="Пароль" />
+    <button id="loginBtn">Увійти</button>
+    <p>Нема акаунту? <a href="#" id="showRegister">Зареєструватися</a></p>
+    <p id="loginMessage" style="color:red;"></p>
   </div>
 
   <!-- Вікно чату -->
