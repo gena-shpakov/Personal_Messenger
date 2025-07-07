@@ -13,6 +13,40 @@ body {
   min-height: 100vh;
 }
 
+body.dark {
+  background: #1e1e1e;
+  color: #eaeaea;
+}
+
+body.dark .authWindow {
+  background: #2c2c2c;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+}
+
+body.dark input,
+body.dark button {
+  background-color: #3a3a3a;
+  border: 1px solid #666;
+  color: #eee;
+}
+
+body.dark input:focus {
+  border-color: #4f9eff;
+}
+
+body.dark button {
+  background-color: #4f9eff;
+}
+
+body.dark button:hover {
+  background-color: #357dcc;
+}
+
+body.dark a {
+  color: #4f9eff;
+}
+
+
 /* ===== Вікно логіну ===== */
 #loginWindow {
   display: flex;
@@ -62,6 +96,88 @@ body {
 #enterBtn:hover {
   background-color: #006fd3;
 }
+
+/* ===== Спільні стилі для вікон логіну та реєстрації ===== */
+.authWindow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 400px;
+  background: #fff;
+  padding: 40px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border-radius: 12px;
+}
+
+.authWindow h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.authWindow input {
+  padding: 12px;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-size: 16px;
+  outline: none;
+  transition: border 0.3s ease;
+}
+
+.authWindow input:focus {
+  border-color: #0084ff;
+}
+
+.authWindow button {
+  width: 100%;
+  padding: 12px 0;
+  font-size: 16px;
+  background-color: #0084ff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.authWindow button:hover {
+  background-color: #006fd3;
+}
+
+.authWindow p {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #555;
+}
+
+.authWindow a {
+  color: #0084ff;
+  text-decoration: none;
+}
+
+.authWindow a:hover {
+  text-decoration: underline;
+}
+
+.authWindow {
+  animation: fadeInForm 0.5s ease;
+}
+
+@keyframes fadeInForm {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
 
 /* ===== Вікно чату ===== */
 #chatWindow {

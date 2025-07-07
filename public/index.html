@@ -8,9 +8,10 @@
   <title>EchoChat</title>
 </head>
 <body>
+  <button id="themeToggle" style="position: absolute; top: 20px; right: 20px;">🌙 Темна тема</button>
 
   <!-- Форма реєстрації -->
-  <div id="registerWindow" style="display:none;">
+  <div id="registerWindow" class="authWindow" style="display:none;">
     <h2>Реєстрація</h2>
     <input type="email" id="regEmail" placeholder="Email" />
     <input type="text" id="regNickname" placeholder="Нікнейм" />
@@ -21,7 +22,7 @@
   </div>
 
   <!-- Форма логіну -->
-  <div id="loginWindow">
+  <div id="loginWindow" class="authWindow">
     <h2>Увійти</h2>
     <input type="email" id="loginEmail" placeholder="Email" />
     <input type="password" id="loginPassword" placeholder="Пароль" />

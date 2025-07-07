@@ -168,3 +168,12 @@ socket.on("online users", (users) => {
     onlineUsersList.appendChild(li);
   });
 });
+
+// Перемикання темної теми
+const themeToggle = document.getElementById("themeToggle");
+
+themeToggle.addEventListener("click", () => {
+  document.body.classList.toggle("dark");
+  const isDark = document.body.classList.contains("dark");
+  themeToggle.textContent = isDark ? "☀️ Світла тема" : "🌙 Темна тема";
+});
