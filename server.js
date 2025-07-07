@@ -2,42 +2,106 @@ require("dotenv").config();
 
 const express = require("express");
 const http = require("http");
+const cors = require("cors");
 const { Server } = require("socket.io");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const { body, validationResult } = require("express-validator");
+const sanitizeHtml = require("sanitize-html");
+const ngrok = require("ngrok");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.json());               // Парсинг JSON у POST-запитах
-app.use(express.static("public"));    // Статичні файли з папки "public"
+app.use(express.json());
+app.use(express.static("public"));
 
-const uri = process.env.MONGODB_URI;
-const JWT_SECRET = process.env.JWT_SECRET || "5e9f90ece308f253c69726f539f879c557ca5f6324f0d324eb97a1aff193c6cdf350385b93d0d7ab1221bd7132fd351377b76c35d488b31f693dc2044ea16a51";
-
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-});
-
-let usersCollection;
-let messagesCollection;
-
-const onlineUsers = new Map();
+// Функція для запуску ngrok і отримання публічного URL
+async function getNgrokUrl(port) {
+  try {
+    const url = await ngrok.connect(port);
+    console.log(`🌍 Ngrok tunnel URL: ${url}`);
+    return url;
+  } catch (err) {
+    console.error("❌ Помилка запуску ngrok:", err);
+    return null;
+  }
+}
 
 async function startServer() {
   try {
+    // Запускаємо ngrok перед іншими налаштуваннями
+    const ngrokUrl = await getNgrokUrl(3000);
+
+    // Налаштування CORS з урахуванням ngrok URL
+    const allowedOrigins = ["http://localhost:3000"];
+    if (ngrokUrl) allowedOrigins.push(ngrokUrl);
+
+    app.use(
+      cors({
+        origin: function (origin, callback) {
+          // Дозволити запити без origin (наприклад, Postman)
+          if (!origin) return callback(null, true);
+          if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+          } else {
+            callback(new Error(`CORS policy: Дозвіл заборонено для origin ${origin}`));
+          }
+        },
+        methods: ["GET", "POST"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+      })
+    );
+
+    // Безпека HTTP заголовків
+    app.use(
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:"],
+            connectSrc: ["'self'", ngrokUrl || "'self'"],
+          },
+        },
+      })
+    );
+
+    // Обмеження частоти запитів (Rate limiting)
+    const limiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 хвилин
+      max: 100, // максимум 100 запитів з однієї IP
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
+    app.use(limiter);
+
+    const uri = process.env.MONGODB_URI;
+    const JWT_SECRET =
+      process.env.JWT_SECRET ||
+      "5e9f90ece308f253c69726f539f879c557ca5f6324f0d324eb97a1aff193c6cdf350385b93d0d7ab1221bd7132fd351377b76c35d488b31f693dc2044ea16a51";
+
+    const client = new MongoClient(uri, {
+      serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+      },
+    });
+
     await client.connect();
     console.log("✅ Підключено до MongoDB Atlas");
 
     const db = client.db("chat");
     usersCollection = db.collection("users");
     messagesCollection = db.collection("messages");
+
+    const onlineUsers = new Map();
 
     // Socket.io логіка
     io.on("connection", (socket) => {
@@ -56,15 +120,27 @@ async function startServer() {
           socket.emit("chat history", history);
         } catch (error) {
           console.error("❌ Помилка отримання історії:", error);
+          socket.emit("error", "Не вдалось завантажити історію");
         }
       });
 
       socket.on("chat message", async (msg) => {
         try {
-          await messagesCollection.insertOne({ text: msg, timestamp: new Date() });
-          io.emit("chat message", msg);
+          const cleanMsg = sanitizeHtml(msg, { allowedTags: [], allowedAttributes: {} });
+          if (!currentUser) {
+            socket.emit("error", "Користувач не автентифікований");
+            return;
+          }
+          const messageObj = {
+            text: cleanMsg,
+            sender: currentUser,
+            timestamp: new Date(),
+          };
+          await messagesCollection.insertOne(messageObj);
+          io.emit("chat message", messageObj);
         } catch (error) {
           console.error("❌ Помилка збереження повідомлення:", error);
+          socket.emit("error", "Не вдалось відправити повідомлення");
         }
       });
 
@@ -77,42 +153,68 @@ async function startServer() {
       });
     });
 
-    // Реєстрація користувача
-    app.post("/api/register", async (req, res) => {
-      const { email, password, nickname } = req.body;
-      if (!email || !password || !nickname) {
-        return res.status(400).json({ message: "Всі поля потрібні" });
-      }
-      const existingUser = await usersCollection.findOne({ email });
-      if (existingUser) {
-        return res.status(400).json({ message: "Користувач вже існує" });
-      }
-      const hashedPassword = await bcrypt.hash(password, 10);
-      await usersCollection.insertOne({ email, password: hashedPassword, nickname, role: "user" });
-      res.status(201).json({ message: "Користувача створено" });
-    });
+    // Реєстрація користувача з валідацією
+    app.post(
+      "/api/register",
+      [
+        body("email").isEmail().normalizeEmail(),
+        body("nickname").trim().isLength({ min: 3 }),
+        body("password").isLength({ min: 6 }),
+      ],
+      async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-    // Логін користувача
-    app.post("/api/login", async (req, res) => {
-      const { email, password } = req.body;
-      if (!email || !password) {
-        return res.status(400).json({ message: "Вкажіть email та пароль" });
+        const { email, password, nickname } = req.body;
+        const existingUser = await usersCollection.findOne({ email });
+        if (existingUser) {
+          return res.status(400).json({ message: "Користувач вже існує" });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await usersCollection.insertOne({
+          email,
+          password: hashedPassword,
+          nickname,
+          role: "user",
+        });
+        res.status(201).json({ message: "Користувача створено" });
       }
-      const user = await usersCollection.findOne({ email });
-      if (!user) {
-        return res.status(401).json({ message: "Невірний email або пароль" });
+    );
+
+    // Логін користувача з перевіркою
+    app.post(
+      "/api/login",
+      [
+        body("email").isEmail().normalizeEmail(),
+        body("password").isLength({ min: 6 }),
+      ],
+      async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+        const { email, password } = req.body;
+        const user = await usersCollection.findOne({ email });
+        if (!user) {
+          return res.status(401).json({ message: "Невірний email або пароль" });
+        }
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+          return res.status(401).json({ message: "Невірний email або пароль" });
+        }
+        const token = jwt.sign(
+          {
+            userId: user._id,
+            email: user.email,
+            role: user.role,
+            nickname: user.nickname,
+          },
+          JWT_SECRET,
+          { expiresIn: "1h" }
+        );
+        res.json({ token, nickname: user.nickname });
       }
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        return res.status(401).json({ message: "Невірний email або пароль" });
-      }
-      const token = jwt.sign(
-        { userId: user._id, email: user.email, role: user.role, nickname: user.nickname },
-        JWT_SECRET,
-        { expiresIn: "1h" }
-      );
-      res.json({ token, nickname: user.nickname });
-    });
+    );
 
     // Middleware для захисту роутів
     function authenticateToken(req, res, next) {
@@ -128,10 +230,7 @@ async function startServer() {
 
     // Захищений роут профілю
     app.get("/api/profile", authenticateToken, async (req, res) => {
-      const user = await usersCollection.findOne(
-        { _id: new ObjectId(req.user.userId) },
-        { projection: { password: 0 } }
-      );
+      const user = await usersCollection.findOne({ _id: new ObjectId(req.user.userId) }, { projection: { password: 0 } });
       res.json(user);
     });
 
