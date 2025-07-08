@@ -11,6 +11,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { body, validationResult } = require("express-validator");
 const sanitizeHtml = require("sanitize-html");
+const { startNgrok } = require("./ngrokHelper"); // ✅ Імпорт ngrok з окремого файлу
 
 const app = express();
 const server = http.createServer(app);
@@ -19,44 +20,30 @@ const io = new Server(server);
 app.use(express.json());
 app.use(express.static("public"));
 
-// Функція для запуску ngrok і отримання публічного URL
-async function getNgrokUrl(port) {
-  try {
-    const url = await ngrok.connect(port);
-    console.log(`🌍 Ngrok tunnel URL: ${url}`);
-    return url;
-  } catch (err) {
-    console.error("❌ Помилка запуску ngrok:", err);
-    return null;
-  }
-}
-
 async function startServer() {
   try {
-    // Запускаємо ngrok перед іншими налаштуваннями
-    const ngrokUrl = await getNgrokUrl(3000);
+    // ✅ Запуск ngrok
+    const ngrokUrl = await startNgrok(3000);
 
-    // Налаштування CORS з урахуванням ngrok URL
+    // ✅ Дозволені origin-джерела
     const allowedOrigins = ["http://localhost:3000"];
     if (ngrokUrl) allowedOrigins.push(ngrokUrl);
 
-    app.use(
-      cors({
-        origin: function (origin, callback) {
-          // Дозволити запити без origin (наприклад, Postman)
-          if (!origin) return callback(null, true);
-          if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-          } else {
-            callback(new Error(`CORS policy: Дозвіл заборонено для origin ${origin}`));
-          }
-        },
-        methods: ["GET", "POST"],
-        allowedHeaders: ["Content-Type", "Authorization"],
-      })
-    );
+    // ✅ CORS
+    app.use(cors({
+      origin: function (origin, callback) {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        } else {
+          return callback(new Error("CORS policy: Заборонено для origin " + origin));
+        }
+      },
+      methods: ["GET", "POST"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+    }));
 
-    // Безпека HTTP заголовків
+    // ✅ HTTP-захист через helmet
     app.use(
       helmet({
         contentSecurityPolicy: {
@@ -71,19 +58,17 @@ async function startServer() {
       })
     );
 
-    // Обмеження частоти запитів (Rate limiting)
-    const limiter = rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 хвилин
-      max: 100, // максимум 100 запитів з однієї IP
+    // ✅ Rate limiting
+    app.use(rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 100,
       standardHeaders: true,
       legacyHeaders: false,
-    });
-    app.use(limiter);
+    }));
 
+    // ✅ MongoDB підключення
     const uri = process.env.MONGODB_URI;
-    const JWT_SECRET =
-      process.env.JWT_SECRET ||
-      "5e9f90ece308f253c69726f539f879c557ca5f6324f0d324eb97a1aff193c6cdf350385b93d0d7ab1221bd7132fd351377b76c35d488b31f693dc2044ea16a51";
+    const JWT_SECRET = process.env.JWT_SECRET || "your_default_jwt_secret";
 
     const client = new MongoClient(uri, {
       serverApi: {
@@ -97,12 +82,12 @@ async function startServer() {
     console.log("✅ Підключено до MongoDB Atlas");
 
     const db = client.db("chat");
-    usersCollection = db.collection("users");
-    messagesCollection = db.collection("messages");
+    const usersCollection = db.collection("users");
+    const messagesCollection = db.collection("messages");
 
     const onlineUsers = new Map();
 
-    // Socket.io логіка
+    // ✅ Socket.io логіка
     io.on("connection", (socket) => {
       console.log("🟢 Користувач підключився");
       let currentUser = null;
@@ -152,7 +137,7 @@ async function startServer() {
       });
     });
 
-    // Реєстрація користувача з валідацією
+    // ✅ Реєстрація
     app.post(
       "/api/register",
       [
@@ -166,9 +151,7 @@ async function startServer() {
 
         const { email, password, nickname } = req.body;
         const existingUser = await usersCollection.findOne({ email });
-        if (existingUser) {
-          return res.status(400).json({ message: "Користувач вже існує" });
-        }
+        if (existingUser) return res.status(400).json({ message: "Користувач вже існує" });
 
         const hashedPassword = await bcrypt.hash(password, 10);
         await usersCollection.insertOne({
@@ -181,7 +164,7 @@ async function startServer() {
       }
     );
 
-    // Логін користувача з перевіркою
+    // ✅ Логін
     app.post(
       "/api/login",
       [
@@ -194,13 +177,10 @@ async function startServer() {
 
         const { email, password } = req.body;
         const user = await usersCollection.findOne({ email });
-        if (!user) {
+        if (!user || !(await bcrypt.compare(password, user.password))) {
           return res.status(401).json({ message: "Невірний email або пароль" });
         }
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-          return res.status(401).json({ message: "Невірний email або пароль" });
-        }
+
         const token = jwt.sign(
           {
             userId: user._id,
@@ -211,15 +191,17 @@ async function startServer() {
           JWT_SECRET,
           { expiresIn: "1h" }
         );
+
         res.json({ token, nickname: user.nickname });
       }
     );
 
-    // Middleware для захисту роутів
+    // ✅ Middleware авторизації
     function authenticateToken(req, res, next) {
       const authHeader = req.headers["authorization"];
       const token = authHeader && authHeader.split(" ")[1];
       if (!token) return res.status(401).json({ message: "Токен відсутній" });
+
       jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) return res.status(403).json({ message: "Недійсний токен" });
         req.user = user;
@@ -227,17 +209,21 @@ async function startServer() {
       });
     }
 
-    // Захищений роут профілю
+    // ✅ Захищений маршрут
     app.get("/api/profile", authenticateToken, async (req, res) => {
-      const user = await usersCollection.findOne({ _id: new ObjectId(req.user.userId) }, { projection: { password: 0 } });
+      const user = await usersCollection.findOne(
+        { _id: new ObjectId(req.user.userId) },
+        { projection: { password: 0 } }
+      );
       res.json(user);
     });
 
+    // ✅ Запуск сервера
     server.listen(3000, "0.0.0.0", () => {
       console.log("🚀 Сервер запущено на http://localhost:3000");
     });
   } catch (error) {
-    console.error("❌ Помилка підключення до MongoDB:", error);
+    console.error("❌ Помилка підключення:", error);
   }
 }
 
