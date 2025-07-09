@@ -1,5 +1,5 @@
 const envPath = process.env.NODE_ENV === "production" ? "/etc/secrets/.env" : ".env";
-require("dotenv").config({path: envPath});
+require("dotenv").config({ path: envPath });
 
 const express = require("express");
 const http = require("http");
@@ -12,7 +12,6 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { body, validationResult } = require("express-validator");
 const sanitizeHtml = require("sanitize-html");
-const { startNgrok } = require("./ngrokHelper"); // ✅ Імпорт ngrok з окремого файлу
 
 const app = express();
 const server = http.createServer(app);
@@ -23,28 +22,26 @@ app.use(express.static("public"));
 
 async function startServer() {
   try {
-    // ✅ Запуск ngrok
-    const ngrokUrl = await startNgrok(3000);
+    // Дозволені origin-джерела (налаштуй під свій фронтенд)
+    const allowedOrigins = ["http://localhost:3000"]; 
 
-    // ✅ Дозволені origin-джерела
-    const allowedOrigins = ["http://localhost:3000"];
-    if (ngrokUrl) allowedOrigins.push(ngrokUrl);
+    // CORS налаштування
+    app.use(
+      cors({
+        origin: function (origin, callback) {
+          if (!origin) return callback(null, true); // для Postman, curl, без origin
+          if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+          } else {
+            return callback(new Error("CORS policy: Заборонено для origin " + origin));
+          }
+        },
+        methods: ["GET", "POST"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+      })
+    );
 
-    // ✅ CORS
-    app.use(cors({
-      origin: function (origin, callback) {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        } else {
-          return callback(new Error("CORS policy: Заборонено для origin " + origin));
-        }
-      },
-      methods: ["GET", "POST"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-    }));
-
-    // ✅ HTTP-захист через helmet
+    // HTTP-захист через helmet
     app.use(
       helmet({
         contentSecurityPolicy: {
@@ -53,23 +50,27 @@ async function startServer() {
             scriptSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
             imgSrc: ["'self'", "data:"],
-            connectSrc: ["'self'", ngrokUrl || "'self'"],
+            connectSrc: ["'self'"], // без ngrok
           },
         },
       })
     );
 
-    // ✅ Rate limiting
-    app.use(rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 100,
-      standardHeaders: true,
-      legacyHeaders: false,
-    }));
+    // Rate limiting
+    app.use(
+      rateLimit({
+        windowMs: 15 * 60 * 1000, // 15 хвилин
+        max: 100, // максимум 100 запитів з однієї IP
+        standardHeaders: true,
+        legacyHeaders: false,
+      })
+    );
 
-    // ✅ MongoDB підключення
+    // Підключення до MongoDB
     const uri = process.env.MONGODB_URI;
-    const JWT_SECRET = process.env.JWT_SECRET || "5e9f90ece308f253c69726f539f879c557ca5f6324f0d324eb97a1aff193c6cdf350385b93d0d7ab1221bd7132fd351377b76c35d488b31f693dc2044ea16a51";
+    const JWT_SECRET =
+      process.env.JWT_SECRET ||
+      "5e9f90ece308f253c69726f539f879c557ca5f6324f0d324eb97a1aff193c6cdf350385b93d0d7ab1221bd7132fd351377b76c35d488b31f693dc2044ea16a51";
 
     const client = new MongoClient(uri, {
       serverApi: {
@@ -88,7 +89,7 @@ async function startServer() {
 
     const onlineUsers = new Map();
 
-    // ✅ Socket.io логіка
+    // Socket.io логіка
     io.on("connection", (socket) => {
       console.log("🟢 Користувач підключився");
       let currentUser = null;
@@ -138,7 +139,7 @@ async function startServer() {
       });
     });
 
-    // ✅ Реєстрація
+    // Реєстрація
     app.post(
       "/api/register",
       [
@@ -165,7 +166,7 @@ async function startServer() {
       }
     );
 
-    // ✅ Логін
+    // Логін
     app.post(
       "/api/login",
       [
@@ -197,7 +198,7 @@ async function startServer() {
       }
     );
 
-    // ✅ Middleware авторизації
+    // Middleware авторизації
     function authenticateToken(req, res, next) {
       const authHeader = req.headers["authorization"];
       const token = authHeader && authHeader.split(" ")[1];
@@ -210,7 +211,7 @@ async function startServer() {
       });
     }
 
-    // ✅ Захищений маршрут
+    // Захищений маршрут
     app.get("/api/profile", authenticateToken, async (req, res) => {
       const user = await usersCollection.findOne(
         { _id: new ObjectId(req.user.userId) },
@@ -219,12 +220,13 @@ async function startServer() {
       res.json(user);
     });
 
-    //Healthcheck for Render
-    app.get("/health", (req, res) => ("OK"));
+    // Healthcheck для Render
+    app.get("/health", (req, res) => res.send("OK"));
 
-    // ✅ Запуск сервера
-    server.listen(3000, "0.0.0.0", () => {
-      console.log("🚀 Сервер запущено на http://localhost:3000");
+    // Запуск сервера
+    const PORT = process.env.PORT || 3000;
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`🚀 Сервер запущено на порті ${PORT}`);
     });
   } catch (error) {
     console.error("❌ Помилка підключення:", error);
