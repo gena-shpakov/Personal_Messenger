@@ -1,4 +1,12 @@
-const socket = io();
+// Отримання токена
+const token = sessionStorage.getItem("token");
+
+// Ініціалізація socket з передачею токена
+const socket = io({
+  auth: {
+    token,
+  },
+});
 
 // Захоплення елементів
 const loginWindow = document.getElementById("loginWindow");
@@ -101,7 +109,7 @@ loginBtn.addEventListener("click", async (e) => {
     if (res.ok && data.token) {
       sessionStorage.setItem("token", data.token);
       sessionStorage.setItem("nickname", data.nickname);
-      showChatWindow();
+      location.reload(); // перезапускаємо сторінку для оновлення підключення до сокета з токеном
     } else {
       loginMessage.textContent = data.message || "Помилка входу.";
     }
@@ -125,8 +133,8 @@ function showChatWindow() {
   }
 }
 
-// Якщо нікнейм вже збережено — одразу перейти до чату
-if (sessionStorage.getItem("nickname")) {
+// Якщо токен є — відображаємо чат
+if (sessionStorage.getItem("nickname") && sessionStorage.getItem("token")) {
   showChatWindow();
 }
 
@@ -159,7 +167,7 @@ socket.on("chat message", (msg) => {
   messages.scrollTop = messages.scrollHeight;
 });
 
-// Отримання списку онлайн користувачів
+// Онлайн користувачі
 socket.on("online users", (users) => {
   onlineUsersList.innerHTML = "";
   users.forEach((user) => {
@@ -169,20 +177,16 @@ socket.on("online users", (users) => {
   });
 });
 
-// === Тема: запам'ятовування через localStorage ===
+// Темна/Світла тема
 const themeToggle = document.getElementById("themeToggle");
 
-// Зчитати збережену тему при завантаженні сторінки
 if (localStorage.getItem("theme") === "dark") {
   document.body.classList.add("dark");
   themeToggle.textContent = "☀️ Світла тема";
 }
 
-// Перемикач теми
 themeToggle.addEventListener("click", () => {
   const isDark = document.body.classList.toggle("dark");
   themeToggle.textContent = isDark ? "☀️ Світла тема" : "🌙 Темна тема";
-
-  // Зберігаємо вибір теми в localStorage
   localStorage.setItem("theme", isDark ? "dark" : "light");
 });

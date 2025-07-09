@@ -1,3 +1,4 @@
+// ✅ Оновлений server.js з JWT-перевіркою для Socket.io
 const envPath = process.env.NODE_ENV === "production" ? "/etc/secrets/.env" : ".env";
 require("dotenv").config({ path: envPath });
 
@@ -15,52 +16,31 @@ const sanitizeHtml = require("sanitize-html");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // дозвіл для всіх frontend-доменів
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+  }
+});
 
 app.use(express.json());
 app.use(express.static("public"));
 
 async function startServer() {
   try {
-    // Дозволені origin-джерела (налаштуй під свій фронтенд)
-    const allowedOrigins = ["http://localhost:3000"]; 
-
-    // CORS налаштування
-    app.use(
-      cors({
-        origin: function (origin, callback) {
-          if (!origin) return callback(null, true); // для Postman, curl, без origin
-          if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-          } else {
-            return callback(new Error("CORS policy: Заборонено для origin " + origin));
-          }
-        },
-        methods: ["GET", "POST"],
-        allowedHeaders: ["Content-Type", "Authorization"],
-      })
-    );
-
     // HTTP-захист через helmet
     app.use(
       helmet({
-        contentSecurityPolicy: {
-          directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            imgSrc: ["'self'", "data:"],
-            connectSrc: ["'self'"], // без ngrok
-          },
-        },
+        contentSecurityPolicy: false,
       })
     );
 
     // Rate limiting
     app.use(
       rateLimit({
-        windowMs: 15 * 60 * 1000, // 15 хвилин
-        max: 100, // максимум 100 запитів з однієї IP
+        windowMs: 15 * 60 * 1000,
+        max: 100,
         standardHeaders: true,
         legacyHeaders: false,
       })
@@ -68,9 +48,7 @@ async function startServer() {
 
     // Підключення до MongoDB
     const uri = process.env.MONGODB_URI;
-    const JWT_SECRET =
-      process.env.JWT_SECRET ||
-      "5e9f90ece308f253c69726f539f879c557ca5f6324f0d324eb97a1aff193c6cdf350385b93d0d7ab1221bd7132fd351377b76c35d488b31f693dc2044ea16a51";
+    const JWT_SECRET = process.env.JWT_SECRET || "5e9f90ece308f253c69726f539f879c557ca5f6324f0d324eb97a1aff193c6cdf350385b93d0d7ab1221bd7132fd351377b76c35d488b31f693dc2044ea16a51";
 
     const client = new MongoClient(uri, {
       serverApi: {
@@ -89,16 +67,27 @@ async function startServer() {
 
     const onlineUsers = new Map();
 
-    // Socket.io логіка
-    io.on("connection", (socket) => {
-      console.log("🟢 Користувач підключився");
-      let currentUser = null;
+    // ✅ Перевірка JWT перед підключенням
+    io.use((socket, next) => {
+      const token = socket.handshake.auth.token;
+      if (!token) {
+        return next(new Error("Неавторизовано: токен відсутній"));
+      }
 
-      socket.on("user connected", (nickname) => {
-        currentUser = nickname;
-        onlineUsers.set(socket.id, nickname);
-        io.emit("online users", Array.from(onlineUsers.values()));
+      jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return next(new Error("Недійсний токен"));
+        socket.user = user;
+        next();
       });
+    });
+
+    // ✅ Socket.io логіка з автентифікацією
+    io.on("connection", (socket) => {
+      console.log("🟢 Користувач підключився", socket.user.nickname);
+
+      const currentUser = socket.user.nickname;
+      onlineUsers.set(socket.id, currentUser);
+      io.emit("online users", Array.from(onlineUsers.values()));
 
       socket.on("get history", async () => {
         try {
@@ -113,13 +102,9 @@ async function startServer() {
       socket.on("chat message", async (msg) => {
         try {
           const cleanMsg = sanitizeHtml(msg, { allowedTags: [], allowedAttributes: {} });
-          if (!currentUser) {
-            socket.emit("error", "Користувач не автентифікований");
-            return;
-          }
           const messageObj = {
             text: cleanMsg,
-            sender: currentUser,
+            sender: socket.user.nickname,
             timestamp: new Date(),
           };
           await messagesCollection.insertOne(messageObj);
@@ -131,11 +116,9 @@ async function startServer() {
       });
 
       socket.on("disconnect", () => {
-        if (currentUser) {
-          onlineUsers.delete(socket.id);
-          io.emit("online users", Array.from(onlineUsers.values()));
-        }
-        console.log("🔴 Користувач вийшов");
+        onlineUsers.delete(socket.id);
+        io.emit("online users", Array.from(onlineUsers.values()));
+        console.log("🔴 Користувач вийшов", currentUser);
       });
     });
 
@@ -156,49 +139,34 @@ async function startServer() {
         if (existingUser) return res.status(400).json({ message: "Користувач вже існує" });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        await usersCollection.insertOne({
-          email,
-          password: hashedPassword,
-          nickname,
-          role: "user",
-        });
+        await usersCollection.insertOne({ email, password: hashedPassword, nickname, role: "user" });
         res.status(201).json({ message: "Користувача створено" });
       }
     );
 
     // Логін
-    app.post(
-      "/api/login",
-      [
-        body("email").isEmail().normalizeEmail(),
-        body("password").isLength({ min: 6 }),
-      ],
-      async (req, res) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-
-        const { email, password } = req.body;
-        const user = await usersCollection.findOne({ email });
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-          return res.status(401).json({ message: "Невірний email або пароль" });
-        }
-
-        const token = jwt.sign(
-          {
-            userId: user._id,
-            email: user.email,
-            role: user.role,
-            nickname: user.nickname,
-          },
-          JWT_SECRET,
-          { expiresIn: "1h" }
-        );
-
-        res.json({ token, nickname: user.nickname });
+    app.post("/api/login", async (req, res) => {
+      const { email, password } = req.body;
+      const user = await usersCollection.findOne({ email });
+      if (!user || !(await bcrypt.compare(password, user.password))) {
+        return res.status(401).json({ message: "Невірний email або пароль" });
       }
-    );
 
-    // Middleware авторизації
+      const token = jwt.sign(
+        {
+          userId: user._id,
+          email: user.email,
+          role: user.role,
+          nickname: user.nickname,
+        },
+        JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+
+      res.json({ token, nickname: user.nickname });
+    });
+
+    // Захищений маршрут
     function authenticateToken(req, res, next) {
       const authHeader = req.headers["authorization"];
       const token = authHeader && authHeader.split(" ")[1];
@@ -211,7 +179,6 @@ async function startServer() {
       });
     }
 
-    // Захищений маршрут
     app.get("/api/profile", authenticateToken, async (req, res) => {
       const user = await usersCollection.findOne(
         { _id: new ObjectId(req.user.userId) },
@@ -223,7 +190,6 @@ async function startServer() {
     // Healthcheck для Render
     app.get("/health", (req, res) => res.send("OK"));
 
-    // Запуск сервера
     const PORT = process.env.PORT || 3000;
     server.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Сервер запущено на порті ${PORT}`);
