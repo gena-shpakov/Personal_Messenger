@@ -1,4 +1,5 @@
-require("dotenv").config();
+const envPath = process.env.NODE_ENV === "production" ? "/etc/secrets/.env" : ".env";
+require("dotenv").config({path: envPath});
 
 const express = require("express");
 const http = require("http");
@@ -68,7 +69,7 @@ async function startServer() {
 
     // ✅ MongoDB підключення
     const uri = process.env.MONGODB_URI;
-    const JWT_SECRET = process.env.JWT_SECRET || "your_default_jwt_secret";
+    const JWT_SECRET = process.env.JWT_SECRET || "5e9f90ece308f253c69726f539f879c557ca5f6324f0d324eb97a1aff193c6cdf350385b93d0d7ab1221bd7132fd351377b76c35d488b31f693dc2044ea16a51";
 
     const client = new MongoClient(uri, {
       serverApi: {
@@ -217,6 +218,9 @@ async function startServer() {
       );
       res.json(user);
     });
+
+    //Healthcheck for Render
+    app.get("/health", (req, res) => ("OK"));
 
     // ✅ Запуск сервера
     server.listen(3000, "0.0.0.0", () => {
