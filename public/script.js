@@ -145,6 +145,8 @@ function renderMessage(msgObj) {
 
   li.classList.add(isOwnMessege ? "own" : "other");
 
+  li.style.animation = "fadeIn 0.5s ease-in-out";
+
   const sender = document.createElement("span");
   sender.classList.add("sender");
   sender.textContent = msgObj.sender + ": ";

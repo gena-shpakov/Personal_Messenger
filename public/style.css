@@ -263,7 +263,7 @@ body.dark #input:focus {
   flex-direction: column;
 }
 
-#messages li.my-message {
+#messages li.own {
   background: #dcf8c6; /* світло-зелений */
   color: #000;
   align-self: flex-start;
@@ -273,7 +273,7 @@ body.dark #input:focus {
   max-width: 75%;
 }
 
-#messages li.other-message {
+#messages li.other {
   background: #ffffff; /* білий або інший колір */
   color: #000;
   align-self: flex-end;
