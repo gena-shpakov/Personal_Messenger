@@ -26,8 +26,5 @@
     "ngrok": "^4.3.3",
     "sanitize-html": "^2.17.0",
     "socket.io": "^4.8.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.10"
   }
 }
