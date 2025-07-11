@@ -258,18 +258,29 @@ body.dark #input:focus {
   flex-grow: 1;
   overflow-y: auto;
   background-color: #f8f8f8;
+
+  display: flex;
+  flex-direction: column;
 }
 
-#messages li {
-  background: #dcf8c6;
-  padding: 10px 14px;
-  border-radius: 16px;
-  margin-bottom: 12px;
+#messages li.my-message {
+  background: #dcf8c6; /* світло-зелений */
+  color: #000;
+  align-self: flex-start;
+  border-radius: 16px 16px 16px 4px; /* більш гострий кут справа */
+  margin-left: 10px;
+  margin-right: auto;
   max-width: 75%;
-  font-size: 15px;
-  word-wrap: break-word;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-  animation: fadeIn 0.3s ease;
+}
+
+#messages li.other-message {
+  background: #ffffff; /* білий або інший колір */
+  color: #000;
+  align-self: flex-end;
+  border-radius: 16px 16px 4px 16px; /* більш гострий кут зліва */
+  margin-right: 10px;
+  margin-left: auto;
+  max-width: 75%;
 }
 
 /* Анімація появи повідомлень */

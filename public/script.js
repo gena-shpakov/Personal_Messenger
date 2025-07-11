@@ -3,9 +3,7 @@ const token = sessionStorage.getItem("token");
 
 // Ініціалізація socket з передачею токена
 const socket = io({
-  auth: {
-    token,
-  },
+  auth: { token },
 });
 
 // Захоплення елементів
@@ -109,7 +107,7 @@ loginBtn.addEventListener("click", async (e) => {
     if (res.ok && data.token) {
       sessionStorage.setItem("token", data.token);
       sessionStorage.setItem("nickname", data.nickname);
-      location.reload(); // перезапускаємо сторінку для оновлення підключення до сокета з токеном
+      location.reload();
     } else {
       loginMessage.textContent = data.message || "Помилка входу.";
     }
@@ -133,36 +131,56 @@ function showChatWindow() {
   }
 }
 
-// Якщо токен є — відображаємо чат
 if (sessionStorage.getItem("nickname") && sessionStorage.getItem("token")) {
   showChatWindow();
+}
+
+// Рендер повідомлення
+function renderMessage(msgObj) {
+  const li = document.createElement("li");
+  li.classList.add("message");
+
+  const nickname = sessionStorage.getItem("nickname");
+  const isOwnMessege = msgObj.sender === nickname;
+
+  li.classList.add(isOwnMessege ? "own" : "other");
+
+  const sender = document.createElement("span");
+  sender.classList.add("sender");
+  sender.textContent = msgObj.sender + ": ";
+
+  const text = document.createElement("span");
+  text.classList.add("text");
+  text.textContent = msgObj.text;
+
+  li.appendChild(sender);
+  li.appendChild(text);
+  return li;
 }
 
 // Надсилання повідомлення
 form.addEventListener("submit", (e) => {
   e.preventDefault();
-  const nickname = sessionStorage.getItem("nickname");
   const message = input.value.trim();
   if (message) {
-    socket.emit("chat message", `${nickname}: ${message}`);
+    socket.emit("chat message", message);
     input.value = "";
   }
 });
 
 // Отримання історії повідомлень
 socket.on("chat history", (history) => {
+  messages.innerHTML = "";
   history.forEach((msgObj) => {
-    const item = document.createElement("li");
-    item.textContent = msgObj.text;
+    const item = renderMessage(msgObj);
     messages.appendChild(item);
   });
   messages.scrollTop = messages.scrollHeight;
 });
 
 // Отримання нового повідомлення
-socket.on("chat message", (msg) => {
-  const item = document.createElement("li");
-  item.textContent = msg;
+socket.on("chat message", (msgObj) => {
+  const item = renderMessage(msgObj);
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 });
@@ -177,7 +195,7 @@ socket.on("online users", (users) => {
   });
 });
 
-// Темна/Світла тема
+// Темна / світла тема
 const themeToggle = document.getElementById("themeToggle");
 
 if (localStorage.getItem("theme") === "dark") {

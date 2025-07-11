@@ -27,6 +27,7 @@ const io = new Server(server, {
 app.use(express.json());
 app.use(express.static("public"));
 
+//Основна функція для запуску сервера
 async function startServer() {
   try {
     // HTTP-захист через helmet
@@ -40,7 +41,7 @@ async function startServer() {
     app.use(
       rateLimit({
         windowMs: 15 * 60 * 1000,
-        max: 100,
+        max: 2000,
         standardHeaders: true,
         legacyHeaders: false,
       })
@@ -89,6 +90,7 @@ async function startServer() {
       onlineUsers.set(socket.id, currentUser);
       io.emit("online users", Array.from(onlineUsers.values()));
 
+      //Запит історії чату
       socket.on("get history", async () => {
         try {
           const history = await messagesCollection.find({}).sort({ timestamp: 1 }).toArray();
@@ -99,6 +101,7 @@ async function startServer() {
         }
       });
 
+      //Надсилання повідомлення
       socket.on("chat message", async (msg) => {
         try {
           const cleanMsg = sanitizeHtml(msg, { allowedTags: [], allowedAttributes: {} });
@@ -115,6 +118,7 @@ async function startServer() {
         }
       });
 
+      //Вихід користувача
       socket.on("disconnect", () => {
         onlineUsers.delete(socket.id);
         io.emit("online users", Array.from(onlineUsers.values()));
@@ -128,7 +132,7 @@ async function startServer() {
       [
         body("email").isEmail().normalizeEmail(),
         body("nickname").trim().isLength({ min: 3 }),
-        body("password").isLength({ min: 6 }),
+        body("password").isLength({ min: 4 }),
       ],
       async (req, res) => {
         const errors = validationResult(req);
