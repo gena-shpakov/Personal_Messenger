@@ -138,25 +138,24 @@ if (sessionStorage.getItem("nickname") && sessionStorage.getItem("token")) {
 // Рендер повідомлення
 function renderMessage(msgObj) {
   const li = document.createElement("li");
-  li.classList.add("message");
 
   const nickname = sessionStorage.getItem("nickname");
-  const isOwnMessege = msgObj.sender === nickname;
+  const isOwnMessage = msgObj.sender === nickname;
 
-  li.classList.add(isOwnMessege ? "own" : "other");
+  li.classList.add(isOwnMessage ? "own" : "other");
+
+  const nicknameEl = document.createElement("div");
+  nicknameEl.classList.add("message-nickname");
+  nicknameEl.textContent = msgObj.sender;
+
+  const textEl = document.createElement("div");
+  textEl.classList.add("message-text");
+  textEl.textContent = msgObj.text;
+
+  li.appendChild(nicknameEl);
+  li.appendChild(textEl);
 
   li.style.animation = "fadeIn 0.5s ease-in-out";
-
-  const sender = document.createElement("span");
-  sender.classList.add("sender");
-  sender.textContent = msgObj.sender + ": ";
-
-  const text = document.createElement("span");
-  text.classList.add("text");
-  text.textContent = msgObj.text;
-
-  li.appendChild(sender);
-  li.appendChild(text);
   return li;
 }
 
