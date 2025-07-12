@@ -273,7 +273,7 @@ body.dark #input:focus {
 }
 
 #messages li.own {
-  align-self: flex-start;
+  align-self: flex-end;
   background: #dcf8c6;
   border-radius: 20px 20px 20px 8px;
   margin-left: 10px;
@@ -281,7 +281,7 @@ body.dark #input:focus {
 }
 
 #messages li.other {
-  align-self: flex-end;
+  align-self: flex-start;
   background: #ffffff;
   border-radius: 20px 20px 8px 20px;
   margin-right: 10px;
