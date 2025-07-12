@@ -233,7 +233,7 @@ body.dark #input:focus {
 
 /* ===== Вікно чату ===== */
 #chatWindow {
-  display: none;
+  display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100%;
@@ -251,6 +251,16 @@ body.dark #input:focus {
 }
 
 /* ===== Повідомлення ===== */
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 15px;
+  list-style: none;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 #messages li {
   position: relative;
   padding: 10px 14px;
