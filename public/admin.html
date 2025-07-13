@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>EchoChat — Адмін</title>
+  <link rel="icon" href="messenger_logo.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h2>Адмін-панель</h2>
+  <div id="adminContent" style="display: none;">
+    <p>Привіт, адміністраторе!</p>
+    <h3>Користувачі</h3>
+    <ul id="allUsersList"></ul>
+
+    <h3>Історія повідомлень</h3>
+    <ul id="allMessagesList"></ul>
+  </div>
+
+  <p id="authMessage" style="color: red;"></p>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

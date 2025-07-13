@@ -90,6 +90,21 @@ async function startServer() {
       onlineUsers.set(socket.id, currentUser);
       io.emit("online users", Array.from(onlineUsers.values()));
 
+      //Якщо - адмін
+      if (socket.user.role === "admin") {
+    socket.emit("доступ дозволено адміну");
+
+    socket.on("отримати всіх користувачів", async () => {
+      const users = await usersCollection.find({}, { projection: { password: 0 } }).toArray();
+      socket.emit("усі користувачі", users);
+    });
+
+    socket.on("отримати всі повідомлення", async () => {
+      const messages = await messagesCollection.find({}).toArray();
+      socket.emit("усі повідомлення", messages);
+    });
+  }
+
       //Запит історії чату
       socket.on("get history", async () => {
         try {
@@ -143,8 +158,10 @@ async function startServer() {
         if (existingUser) return res.status(400).json({ message: "Користувач вже існує" });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        await usersCollection.insertOne({ email, password: hashedPassword, nickname, role: "user" });
-        res.status(201).json({ message: "Користувача створено" });
+        const role = adminKey === process.env.ADMIN_KEY ? "admin" : "user";
+
+        await usersCollection.insertOne({ email, password: hashedPassword, nickname, role});
+        res.status(201).json({ message: `Користувача створено як ${role}` });
       }
     );
 
