@@ -404,3 +404,67 @@ button:hover {
     max-width: 70%;
   }
 }
+
+/* ===== Адмін-панель ===== */
+#adminContent {
+  max-width: 700px;
+  width: 100%;
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  margin-top: 40px;
+  animation: fadeInForm 0.5s ease;
+}
+
+#adminContent h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-size: 20px;
+  color: #333;
+  border-bottom: 2px solid #0084ff;
+  padding-bottom: 5px;
+}
+
+#adminContent ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px 0;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+}
+
+#adminContent ul li {
+  padding: 10px 15px;
+  border-bottom: 1px solid #eee;
+  font-size: 15px;
+  color: #444;
+}
+
+#adminContent ul li:last-child {
+  border-bottom: none;
+}
+
+/* Темна тема для адмін-панелі */
+body.dark #adminContent {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+}
+
+body.dark #adminContent ul {
+  background-color: #2a2a2a;
+  border-color: #444;
+}
+
+body.dark #adminContent ul li {
+  border-bottom: 1px solid #444;
+  color: #e0e0e0;
+}
+
+body.dark #adminContent h3 {
+  border-color: #4f9eff;
+  color: #e0e0e0;
+}
