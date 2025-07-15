@@ -83,8 +83,15 @@ async function startServer() {
     });
 
     // ✅ Socket.io логіка з автентифікацією
-    io.on("connection", (socket) => {
+    io.on("connection", async (socket) => {
       console.log("🟢 Користувач підключився", socket.user.nickname);
+
+      const userFromDb = await usersCollection.findOne({_id: new ObjectId(SourceBufferList.user.userId) });
+      if (!userFromDb) {
+        socket.emit("force logout", "Ваш акаунт не знайдено");
+        socket.disconnect();
+        return;
+      }
 
       const currentUser = socket.user.nickname;
       onlineUsers.set(socket.id, currentUser);
@@ -184,7 +191,7 @@ async function startServer() {
         { expiresIn: "1h" }
       );
 
-      res.json({ token, nickname: user.nickname });
+      res.json({ token, nickname: user.nickname, role: user.role });
     });
 
     // Захищений маршрут

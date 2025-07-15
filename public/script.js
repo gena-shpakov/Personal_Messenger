@@ -91,6 +91,9 @@ loginBtn.addEventListener("click", async (e) => {
   const email = loginEmail.value.trim();
   const password = loginPassword.value.trim();
 
+  loginMessage.style.color = "red";
+  loginMessage.textContent = "";
+
   if (!email || !password) {
     loginMessage.textContent = "Заповніть усі поля.";
     return;
@@ -102,19 +105,32 @@ loginBtn.addEventListener("click", async (e) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
+
     const data = await res.json();
 
-    if (res.ok && data.token) {
+    if (!res.ok) {
+      loginMessage.textContent = data.message || "Помилка входу";
+      return;
+    }
+
+    if (data.token) {
       sessionStorage.setItem("token", data.token);
       sessionStorage.setItem("nickname", data.nickname);
-      location.reload();
+      sessionStorage.setItem("role", data.role);
+
+      if (data.role === "admin") {
+        window.location.href = "admin.html";
+      } else {
+        location.reload();
+      }
     } else {
-      loginMessage.textContent = data.message || "Помилка входу.";
+      loginMessage.textContent = "Невідома помилка";
     }
+
   } catch (err) {
-    loginMessage.textContent = "Помилка мережі.";
+    loginMessage.textContent = "Помилка мережі або сервера";
   }
-});
+  });
 
 // Показати вікно чату
 function showChatWindow() {
@@ -208,4 +224,21 @@ themeToggle.addEventListener("click", () => {
   const isDark = document.body.classList.toggle("dark");
   themeToggle.textContent = isDark ? "☀️ Світла тема" : "🌙 Темна тема";
   localStorage.setItem("theme", isDark ? "dark" : "light");
+});
+
+// ===================== 🔒 Обробка видаленого акаунта ======================
+socket.on("force logout", (msg) => {
+  alert(msg || "Сесію завершено. Увійдіть знову.");
+  sessionStorage.clear();
+  window.location.href = "/";
+});
+
+// Обробка WebSocket помилок
+socket.on("connect_error", (err) => {
+  console.error("Помилка WebSocket:", err.message);
+  if (err.message.includes("токен") || err.message.includes("Користувача")) {
+    alert("Помилка автентифікації. Увійдіть повторно.");
+    sessionStorage.clear();
+    window.location.href = "/";
+  }
 });
