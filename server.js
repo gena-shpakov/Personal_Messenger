@@ -1,4 +1,3 @@
-// ✅ Оновлений server.js з JWT-перевіркою для Socket.io
 const envPath = process.env.NODE_ENV === "production" ? "/etc/secrets/.env" : ".env";
 require("dotenv").config({ path: envPath });
 
@@ -18,7 +17,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // дозвіл для всіх frontend-доменів
+    origin: "*",
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type", "Authorization"]
   }
@@ -27,17 +26,10 @@ const io = new Server(server, {
 app.use(express.json());
 app.use(express.static("public"));
 
-//Основна функція для запуску сервера
 async function startServer() {
   try {
-    // HTTP-захист через helmet
-    app.use(
-      helmet({
-        contentSecurityPolicy: false,
-      })
-    );
+    app.use(helmet({ contentSecurityPolicy: false }));
 
-    // Rate limiting
     app.use(
       rateLimit({
         windowMs: 15 * 60 * 1000,
@@ -47,9 +39,8 @@ async function startServer() {
       })
     );
 
-    // Підключення до MongoDB
     const uri = process.env.MONGODB_URI;
-    const JWT_SECRET = process.env.JWT_SECRET || "5e9f90ece308f253c69726f539f879c557ca5f6324f0d324eb97a1aff193c6cdf350385b93d0d7ab1221bd7132fd351377b76c35d488b31f693dc2044ea16a51";
+    const JWT_SECRET = process.env.JWT_SECRET || "your_default_secret";
 
     const client = new MongoClient(uri, {
       serverApi: {
@@ -68,12 +59,10 @@ async function startServer() {
 
     const onlineUsers = new Map();
 
-    // ✅ Перевірка JWT перед підключенням
+    // ✅ Перевірка JWT
     io.use((socket, next) => {
       const token = socket.handshake.auth.token;
-      if (!token) {
-        return next(new Error("Неавторизовано: токен відсутній"));
-      }
+      if (!token) return next(new Error("Неавторизовано: токен відсутній"));
 
       jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) return next(new Error("Недійсний токен"));
@@ -82,13 +71,20 @@ async function startServer() {
       });
     });
 
-    // ✅ Socket.io логіка з автентифікацією
+    // ✅ Socket.io логіка
     io.on("connection", async (socket) => {
-      console.log("🟢 Користувач підключився", socket.user.nickname);
+      console.log("🟢 Користувач підключився:", socket.user.nickname);
 
-      const userFromDb = await usersCollection.findOne({_id: new ObjectId(SourceBufferList.user.userId) });
+      let userFromDb;
+      try {
+        userFromDb = await usersCollection.findOne({ _id: new ObjectId(socket.user.userId) });
+      } catch (err) {
+        console.error("❌ Помилка при пошуку користувача:", err);
+      }
+
       if (!userFromDb) {
-        socket.emit("force logout", "Ваш акаунт не знайдено");
+        console.warn(`⚠️ Користувача з ID ${socket.user.userId} не знайдено`);
+        socket.emit("account not found", "Ваш акаунт не знайдено. Хочете створити новий?");
         socket.disconnect();
         return;
       }
@@ -97,22 +93,20 @@ async function startServer() {
       onlineUsers.set(socket.id, currentUser);
       io.emit("online users", Array.from(onlineUsers.values()));
 
-      //Якщо - адмін
       if (socket.user.role === "admin") {
-    socket.emit("доступ дозволено адміну");
+        socket.emit("доступ дозволено адміну");
 
-    socket.on("отримати всіх користувачів", async () => {
-      const users = await usersCollection.find({}, { projection: { password: 0 } }).toArray();
-      socket.emit("усі користувачі", users);
-    });
+        socket.on("отримати всіх користувачів", async () => {
+          const users = await usersCollection.find({}, { projection: { password: 0 } }).toArray();
+          socket.emit("усі користувачі", users);
+        });
 
-    socket.on("отримати всі повідомлення", async () => {
-      const messages = await messagesCollection.find({}).toArray();
-      socket.emit("усі повідомлення", messages);
-    });
-  }
+        socket.on("отримати всі повідомлення", async () => {
+          const messages = await messagesCollection.find({}).toArray();
+          socket.emit("усі повідомлення", messages);
+        });
+      }
 
-      //Запит історії чату
       socket.on("get history", async () => {
         try {
           const history = await messagesCollection.find({}).sort({ timestamp: 1 }).toArray();
@@ -123,7 +117,6 @@ async function startServer() {
         }
       });
 
-      //Надсилання повідомлення
       socket.on("chat message", async (msg) => {
         try {
           const cleanMsg = sanitizeHtml(msg, { allowedTags: [], allowedAttributes: {} });
@@ -140,15 +133,14 @@ async function startServer() {
         }
       });
 
-      //Вихід користувача
       socket.on("disconnect", () => {
         onlineUsers.delete(socket.id);
         io.emit("online users", Array.from(onlineUsers.values()));
-        console.log("🔴 Користувач вийшов", currentUser);
+        console.log("🔴 Користувач вийшов:", currentUser);
       });
     });
 
-    // Реєстрація
+    // ✅ Реєстрація
     app.post(
       "/api/register",
       [
@@ -165,14 +157,14 @@ async function startServer() {
         if (existingUser) return res.status(400).json({ message: "Користувач вже існує" });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const role = adminKey === process.env.ADMIN_KEY ? "admin" : "user";
+        const role = req.body.adminKey === process.env.ADMIN_KEY ? "admin" : "user";
 
-        await usersCollection.insertOne({ email, password: hashedPassword, nickname, role});
+        await usersCollection.insertOne({ email, password: hashedPassword, nickname, role });
         res.status(201).json({ message: `Користувача створено як ${role}` });
       }
     );
 
-    // Логін
+    // ✅ Логін
     app.post("/api/login", async (req, res) => {
       const { email, password } = req.body;
       const user = await usersCollection.findOne({ email });
@@ -194,7 +186,7 @@ async function startServer() {
       res.json({ token, nickname: user.nickname, role: user.role });
     });
 
-    // Захищений маршрут
+    // ✅ Захищений маршрут
     function authenticateToken(req, res, next) {
       const authHeader = req.headers["authorization"];
       const token = authHeader && authHeader.split(" ")[1];
@@ -215,7 +207,6 @@ async function startServer() {
       res.json(user);
     });
 
-    // Healthcheck для Render
     app.get("/health", (req, res) => res.send("OK"));
 
     const PORT = process.env.PORT || 3000;

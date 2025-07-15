@@ -242,3 +242,14 @@ socket.on("connect_error", (err) => {
     window.location.href = "/";
   }
 });
+
+socket.on("account not found", (msg) => {
+  if (confirm (msg)) {
+    sessionStorage.clear();
+    window.location.href = "/";
+  } else {
+    alert("Сесію завершено");
+    sessionStorage.clear();
+    window.location.href = "/";
+  }
+});  
