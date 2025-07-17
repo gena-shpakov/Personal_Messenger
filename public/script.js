@@ -1,5 +1,17 @@
+function getStorageItem(key) {
+  return sessionStorage.getItem(key) || localStorage.getItem(key);
+}
+
+function setStorageItem(key, value, rememberMe) {
+  if (rememberMe) {
+    localStorage.setItem(key, value);
+  } else {
+    sessionStorage.setItem(key, value);
+  }
+}
+
 // Отримання токена
-const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+const token = getStorageItem("token");
 
 // Ініціалізація socket з передачею токена
 const socket = io({
@@ -91,6 +103,7 @@ loginBtn.addEventListener("click", async (e) => {
 
   const email = loginEmail.value.trim();
   const password = loginPassword.value.trim();
+  const rememberMe = rememberMe.checked;
 
   loginMessage.style.color = "red";
   loginMessage.textContent = "";
@@ -115,16 +128,9 @@ loginBtn.addEventListener("click", async (e) => {
     }
 
     if (data.token) {
-      if (rememberMe.checked) {
-      sessionStorage.setItem("token", data.token);
-      sessionStorage.setItem("nickname", data.nickname);
-      sessionStorage.setItem("role", data.role);
-      } else {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("nickname", data.nickname);
-        localStorage.setItem("role", data.role);
-      }
-
+      setStorageItem("token", data.token, rememberMe);
+      setStorageItem("nickname", data.nickname, rememberMe);
+      setStorageItem("role", data.role, rememberMe);
 
       if (data.role === "admin") {
         window.location.href = "admin.html";
@@ -142,7 +148,7 @@ loginBtn.addEventListener("click", async (e) => {
 
 // Показати вікно чату
 function showChatWindow() {
-  const nickname = sessionStorage.getItem("nickname");
+  const nickname = getStorageItem("nickname");
   if (nickname) {
     displayNickname.textContent = nickname;
     loginWindow.style.display = "none";
@@ -155,7 +161,7 @@ function showChatWindow() {
   }
 }
 
-if (sessionStorage.getItem("nickname") && sessionStorage.getItem("token")) {
+if (getStorageItem("nickname") && getStorageItem("token")) {
   showChatWindow();
 }
 
@@ -245,17 +251,13 @@ socket.on("force logout", (msg) => {
 // Обробка WebSocket помилок
 socket.on("connect_error", (err) => {
   console.error("Помилка Websocket:", err.message);
-  if (err.message.toLowerCase().includes("токен") || err.message.toLowerCase().toLowerCase().includes("користувача")) {
-    alert("Сесію завершено або акаунт видалено. Будь ласка, увійдіть знову або зареєструйтесь");
+  if (
+    err.message.toLowerCase().includes("токен") ||
+    err.message.toLowerCase().includes("користувача")
+  ) {
+    alert("Сесія завершено або акаунт видалено. Будь ласка, увійдіть знову або зареєструйтесь");
     sessionStorage.clear();
     localStorage.clear();
     window.location.href = "/";
   }
-});
-
-socket.on("force logout", (msg) => {
-  alert(msg || "Сесію завершено. Хочете створити новий?");
-  sessionStorage.clear();
-  localStorage.clear();
-  window.location.href = "/";
-}); 
+ });
