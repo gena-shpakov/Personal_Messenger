@@ -84,7 +84,7 @@ async function startServer() {
 
       if (!userFromDb) {
         console.warn(`⚠️ Користувача з ID ${socket.user.userId} не знайдено`);
-        socket.emit("account not found", "Ваш акаунт не знайдено. Хочете створити новий?");
+        socket.emit("force logout", "Ваш акаунт не знайдено. Хочете створити новий?");
         socket.disconnect();
         return;
       }
