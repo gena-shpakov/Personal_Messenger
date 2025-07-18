@@ -103,7 +103,7 @@ loginBtn.addEventListener("click", async (e) => {
 
   const email = loginEmail.value.trim();
   const password = loginPassword.value.trim();
-  const rememberMe = rememberMe.checked;
+  const remember = rememberMe.checked;
 
   loginMessage.style.color = "red";
   loginMessage.textContent = "";
@@ -128,9 +128,9 @@ loginBtn.addEventListener("click", async (e) => {
     }
 
     if (data.token) {
-      setStorageItem("token", data.token, rememberMe);
-      setStorageItem("nickname", data.nickname, rememberMe);
-      setStorageItem("role", data.role, rememberMe);
+      setStorageItem("token", data.token, remember);
+      setStorageItem("nickname", data.nickname, remember);
+      setStorageItem("role", data.role, remember);
 
       if (data.role === "admin") {
         window.location.href = "admin.html";
@@ -169,7 +169,7 @@ if (getStorageItem("nickname") && getStorageItem("token")) {
 function renderMessage(msgObj) {
   const li = document.createElement("li");
 
-  const nickname = sessionStorage.getItem("nickname");
+  const nickname = getStorageItem("nickname");
   const isOwnMessage = msgObj.sender === nickname;
 
   li.classList.add(isOwnMessage ? "own" : "other");
